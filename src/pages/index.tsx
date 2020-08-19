@@ -3,8 +3,8 @@ import Link from 'next/link';
 
 const test: React.FC = () => (
     <p>
-      <Link href="/">
-        <a>heehee</a>
+      <Link href="/test">
+        <a>muahaha</a>
       </Link>
     </p>
 );
