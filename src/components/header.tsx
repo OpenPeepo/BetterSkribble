@@ -1,15 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
+import HeaderLogin from './header-login';
 
 const Header: React.FC = () => (
   <div className="header-wrapper">
     <nav>
-      <Link href="/">
-        <a>Home</a>
+      <Link href="/create">
+        <a className="button button-create">Create</a>
       </Link>
-      <Link href="/test">
-        <a>Test</a>
-      </Link>
+      <HeaderLogin />
     </nav>
   </div>
 );

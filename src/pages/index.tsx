@@ -1,26 +1,9 @@
-import React, { useState } from 'react';
-import Link from 'next/link';
-import MatchList from '../components/match-list/list';
-import MatchInfo from '../types/match-info';
+import React from 'react';
 
-let id = 1; // Saves across non-reloads (In-page navigation), lost on reload, per-client
-let updateMatches: (match: MatchInfo) => void;
-setInterval(() => {
-  updateMatches({id: id, name: "Test " + id++, password: false});
-}, 3000);
+// TODO: Website that explains what BetterSkribble is about, and a CSS file that moves the header to the center
 
-const test: React.FC = () => {
-  const [matches, setMatches] = useState<MatchInfo[]>([]); // matches only exists in current scope. lost on navigation and reload
-  updateMatches = match => setMatches([...matches, match]);
-
-  return (
-    <p>
-      <MatchList matches={matches} />
-      <Link href="/test">
-        <a>muahaha</a>
-      </Link>
-    </p>
-  );
+const index: React.FC = () => {
+  // TODO: Return JSX Element that contains the game info and header css
 };
 
-export default test;
+export default index;
