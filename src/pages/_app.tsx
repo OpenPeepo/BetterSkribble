@@ -3,6 +3,8 @@ import App from 'next/app';
 import MainLayout from '../components/layouts/main';
 import { Provider } from 'next-auth/client';
 
+import '../styles/_app.css';
+
 class MyApp extends App {
   render(): JSX.Element {
     const { Component, pageProps } = this.props;

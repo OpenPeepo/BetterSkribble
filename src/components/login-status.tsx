@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
+import UserAvatar from './user-avatar';
 
-const HeaderLogin: React.FC = () => {
-    const token_login;  // TODO, next-auth (try staying up-to-date with next-auth PR merge on DefinitelyTyped) IF NECESSARY.
+const LoginStatus: React.FC = () => {
+    const token_login = 1;  // TODO, next-auth (try staying up-to-date with next-auth PR merge on DefinitelyTyped) IF NECESSARY.
                         // (Look into next-auth authentication methods more)
                         // npm i @types/next-auth
 
@@ -17,4 +18,4 @@ const HeaderLogin: React.FC = () => {
     }
 };
 
-export default HeaderLogin;
+export default LoginStatus;
