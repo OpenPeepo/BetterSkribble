@@ -1,0 +1,8 @@
+.user-wrapper {
+    height: 100%;
+}
+
+.user-wrapper img {
+    height: 100%;
+    border-radius: 50%;
+}

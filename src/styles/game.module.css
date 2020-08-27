@@ -1,0 +1,8 @@
+.layout {
+    display: flex;
+    justify-content: space-around;
+}
+
+.canvas-wrapper canvas {
+    width: 80vmin;
+}

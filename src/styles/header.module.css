@@ -1,0 +1,23 @@
+.header {
+    margin: 0 auto;
+    width: 90%;
+    min-width: 50vw;
+    max-width: 90vmin;
+    height: 100%;
+}
+
+.header nav {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.create-game {
+}
+
+.login-status {
+    height: 100%;
+}

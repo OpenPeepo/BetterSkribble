@@ -1,0 +1,19 @@
+.home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.img-wrapper {
+    padding: 0 10vw 0 10vw;
+}
+
+.img-wrapper img {
+    width: 100%;
+}
+
+.main-description {
+    text-align: center;
+    margin: 16px;
+}

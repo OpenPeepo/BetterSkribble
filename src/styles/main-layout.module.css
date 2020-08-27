@@ -1,0 +1,19 @@
+.header {
+    position: fixed;
+
+    width: calc(100% - 2 * calc(4px + 0.5vw));
+    height: calc(0.5vw + 32px);
+
+    padding: calc(4px + 0.5vw);
+
+    background-color: seashell;
+}
+
+.content-wrapper {
+    padding-top: calc(32px + 0.5vw + 2 * calc(4px + 0.5vw));
+    height: 100%;
+}
+
+.content {
+    padding: 32px;
+}
