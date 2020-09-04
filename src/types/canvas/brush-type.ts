@@ -1,11 +1,12 @@
 import CanvasBrush from "./brush";
+import CircleFillBrush from "./brush/circle-fill-brush";
 
 export enum CanvasBrushType {
     UNKNOWN,
     CIRCLE_FILL
 }
 
-export function getBrush(type: CanvasBrushType): CanvasBrush {
+export function getBrush(type: CanvasBrushType): CanvasBrush | null {
     switch (type) {
         case CanvasBrushType.UNKNOWN:
             return null;
@@ -14,4 +15,4 @@ export function getBrush(type: CanvasBrushType): CanvasBrush {
     }
 }
 
-export default { getBrush, CanvasBrushType };
+export default CanvasBrushType;

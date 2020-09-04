@@ -12,8 +12,7 @@ class MyApp extends App {
     return (
       <Provider options={
         {
-          clientMaxAge: 0,
-          keepAlive: 0
+          clientMaxAge: 0
         }
       } session={pageProps.session} >
         <MainLayout>

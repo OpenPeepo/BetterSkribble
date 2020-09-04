@@ -1,5 +1,15 @@
 abstract class CanvasBrush {
-    paint(imageData: ImageData, x: number, y: number, rgba: number): void {
+    redrawOnly: boolean;
+    stepOrder: boolean;
+
+    constructor(completeOnly: boolean, stepOrder: boolean) {
+        this.redrawOnly = completeOnly;
+        this.stepOrder = stepOrder;
+    }
+
+    abstract draw(ctx: CanvasRenderingContext2D, drawSteps: [number, number][]): void;
+
+    protected drawPixel(imageData: ImageData, x: number, y: number, rgba: number): void {
         const width = imageData.width;
 
         const red = (rgba & 0xFF000000) >> 6;

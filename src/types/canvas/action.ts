@@ -3,11 +3,11 @@ import CanvasBrushType from "./brush-type";
 
 class CanvasAction {
     brush: CanvasBrushType;
-    positions: Record<string, unknown>[];
+    steps: [number, number][];
 
     constructor(brush: CanvasBrushType = CanvasBrushType.UNKNOWN) {
         this.brush = brush;
-        this.positions = [];
+        this.steps = [];
     }
 
 
