@@ -47,7 +47,7 @@ function* actionStepIndexIt(actions: CanvasAction[], indexLimit?: [number, numbe
 }
 
 function furthestRootedIndex(actions: CanvasAction[],
-    indexRoot: [number, number], maxIndex: [number, number]) {
+    indexRoot: [number, number] = [0, 0], maxIndex?: [number, number]) {
     const chainIterator = actionStepIndexIt(actions, maxIndex, indexRoot);
 
     let previousIteration: [number, number] | null = null;
@@ -85,8 +85,8 @@ function pastImageDataIndex(actions: CanvasAction[],
     return null;
 }
 
-function generateImDaState(ctx: CanvasRenderingContext2D, width: number, height: number): ImageData {
-    return ctx.getImageData(0, 0, width, height);
+function generateImDaState(ctx: CanvasRenderingContext2D): ImageData {
+    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 function draw(canvas: RefObject<HTMLCanvasElement>, actions: CanvasAction[],
