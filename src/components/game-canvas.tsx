@@ -11,11 +11,18 @@ type PropType = {
     id: number
 }
 
-function* actionStepIndexIt(actions: CanvasAction[], start = [0, 0], end?: [number, number]): Generator<[number, number | null]> {
-    const [ actionStartIt, stepStartIt ] = start;
-    const [ actionEndIt, stepEndIt ] = end ? end : [undefined, undefined];
-    
-    for (let actionIt = actionStartIt; actionIt < actions.length; actionIt++) {
+// TODO: LITERALLY SPREAD 3/4 OF THIS FILE SOMEWHERE ELSE
+
+function* actionStepIndexIt(actions: CanvasAction[], indexLimit?: [number, number], start = [0, 0]): Generator<[number, number | null]> {
+    const [actionStartIt, stepStartIt] = start;
+    const [actionLimitIt, stepLimitIt] = indexLimit || [undefined, undefined];
+
+    const reverse = actionLimitIt !== undefined && actionLimitIt < actionStartIt ||
+        stepLimitIt !== undefined && stepLimitIt < stepStartIt;
+
+    for (let actionIt = actionStartIt;
+        reverse ? actionIt >= 0 : actionIt < actions.length;
+        reverse ? actionIt-- : actionIt++) {
         const action = actions[actionIt];
 
         const steps = action?.steps;
@@ -24,34 +31,62 @@ function* actionStepIndexIt(actions: CanvasAction[], start = [0, 0], end?: [numb
             continue;
         }
 
-        for (let stepIt = stepStartIt; stepIt < steps.length; stepIt++) {
+        for (let stepIt = (actionIt == actionStartIt) ? stepStartIt : (reverse ? steps.length - 1 : 0);
+            reverse ? stepIt >= 0 : stepIt < steps.length;
+            reverse ? stepIt-- : stepIt++) {
             yield [actionIt, stepIt];
 
-            if (actionEndIt && stepEndIt &&
-                (actionIt == actionEndIt && stepIt >= stepEndIt ||
-                    actionIt > actionEndIt)) {
+            if (!actionLimitIt || !stepLimitIt) continue;
+
+            if (actionIt == actionLimitIt && (reverse ? stepIt <= stepLimitIt : stepIt >= stepLimitIt) ||
+                    (reverse ? actionIt < actionLimitIt : actionIt > actionLimitIt)) {
                 return;
             }
         }
     }
 }
 
-function findLastChainedStep(actions: CanvasAction[],
-    startIndex: [number, number], endIndex: [number, number]): [number, number] | null {
-    const chainIterator = actionStepIndexIt(actions, startIndex, endIndex);
+function furthestRootedIndex(actions: CanvasAction[],
+    indexRoot: [number, number], maxIndex: [number, number]) {
+    const chainIterator = actionStepIndexIt(actions, maxIndex, indexRoot);
 
-    let previousElement: [number, number] | null = null;
+    let previousIteration: [number, number] | null = null;
     for (let indexItR = chainIterator.next(); !indexItR.done; indexItR = chainIterator.next()) {
-        const [ actionIndex, stepIndex ] = indexItR.value;
+        const [actionIndex, stepIndex] = indexItR.value;
 
         if (stepIndex === null || !actions[actionIndex].steps[stepIndex]) {
             break;
         }
 
-        previousElement = [ actionIndex, stepIndex ];
+        previousIteration = [actionIndex, stepIndex];
     }
 
-    return previousElement;
+    return previousIteration;
+}
+
+function pastImageDataIndex(actions: CanvasAction[],
+    history: ImageData[][], presentIndex: [number, number], onlyFullActions = false): [number, number] | null {
+    const imDaIterator = actionStepIndexIt(actions, [0, 0], presentIndex);
+
+    // Skip present index
+    if (imDaIterator.next().done) return null;
+
+    for (let indexItR = imDaIterator.next(); !indexItR.done; indexItR = imDaIterator.next()) {
+        const [actionIndex, stepIndex] = indexItR.value;
+        if (stepIndex === null) continue;
+
+        if (history[actionIndex][stepIndex]) {
+            if (onlyFullActions && (actions[actionIndex] && stepIndex !== actions[actionIndex].steps.length - 1)) continue;
+
+            return [actionIndex, stepIndex];
+        }
+    }
+
+    return null;
+}
+
+function generateImDaState(ctx: CanvasRenderingContext2D, width: number, height: number): ImageData {
+    return ctx.getImageData(0, 0, width, height);
 }
 
 function draw(canvas: RefObject<HTMLCanvasElement>, actions: CanvasAction[],
@@ -63,21 +98,15 @@ function draw(canvas: RefObject<HTMLCanvasElement>, actions: CanvasAction[],
     const ctx = currentCanvas.getContext('2d');
     if (!ctx) return;
 
-    const generateImDaState = () => {
-        return ctx.getImageData(0, 0, currentCanvas.width, currentCanvas.height);
-    };
-
+    const [lastRoot, setLastRoot] = useState<[number, number]>();
     const [imDaHistory, setImDaHistory] = useState<ImageData[][]>([]);
 
     // Step 1
-    // Declare last action index i in a complete chain from the start (max actionIndex)
-    // Declare last step index j in a complete chain from the start (max arraylength)
+    //d Declare last action index i in a complete chain from the start (max actionIndex)
+    //d Declare last step index j in a complete chain from the start (max arraylength)
     // Step 2
-    // Render everything from the latest imagedata state before both indices up to a[i][j],
-    // if it.brush.completeOnly skip imgData UNLESS (!) last element of action
-
-
-
+    //t Render everything from the latest imagedata state before both indices up to a[i][j],
+    //d if it.brush.completeOnly skip imgData UNLESS (!) last element of action
 
     for (let actionIt = actionIndex; actionIndex < actions.length; actionIt++) {
         const action = actions[actionIt];
@@ -128,9 +157,16 @@ function draw(canvas: RefObject<HTMLCanvasElement>, actions: CanvasAction[],
 
 const GameCanvas: React.FC<PropType> = ({ id }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const generateSocketEventName = (eventName: string) => `game.${id}.${eventName}`;
+    handleSocketEvents(id);
 
-    useSocket(generateSocketEventName("draw.live"), (actionIndex: number, stepIndex: number, data: Record<string, unknown>, brushType?: CanvasBrushType) => {
+    return <canvas ref={canvasRef} width="600" height="400"></canvas>;
+};
+
+function handleSocketEvents(id: number) {
+    const socketEventName = (name: string) => `game.${id}.${name}`;
+    
+    useSocket(socketEventName("draw.live"), (actionIndex: number, stepIndex: number, data: Record<string, unknown>, brushType?: CanvasBrushType) => {
+        // TODO rate limit
         const [actions, setActions] = useState<CanvasAction[]>([]);
 
         let actionReIndex: number | undefined;
@@ -155,9 +191,7 @@ const GameCanvas: React.FC<PropType> = ({ id }) => {
 
         draw(canvasRef, actionReIndex, stepReIndex);
     });
-
-    return <canvas ref={canvasRef} width="600" height="400"></canvas>;
-};
+}
 
 GameCanvas.propTypes = {
     id: PropTypes.number.isRequired

@@ -6,11 +6,11 @@ const socket = io();
 // eslint-disable-next-line @typescript-eslint/ban-types
 export default function useSocket(eventName: string, callback: Function): SocketIOClient.Socket {
     useEffect(() => {
-        console.log("any connecters?");
+        console.log(eventName + ": any connecters?");
         socket.on(eventName, callback);
 
         return function useSocketCleanup() {
-            console.log("any disconnecters?");
+            console.log(eventName + ": any disconnecters?");
             socket.off(eventName, callback);
         };
     }, [eventName, callback]);
