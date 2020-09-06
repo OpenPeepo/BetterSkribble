@@ -13,12 +13,20 @@ type PropType = {
 
 // TODO: LITERALLY SPREAD 3/4 OF THIS FILE SOMEWHERE ELSE
 
-function* actionStepIndexIt(actions: CanvasAction[], indexLimit?: [number, number], start = [0, 0]): Generator<[number, number | null]> {
+function isSmallerIndexThan(startIndex: [number, number], endIndex: [number, number]) {
+    const [actionStartIndex, stepStartIndex] = startIndex;
+    const [actionEndIndex, stepEndIndex] = endIndex;
+
+    return actionStartIndex < actionEndIndex ||
+        actionStartIndex == actionEndIndex && stepStartIndex <= stepEndIndex;
+}
+
+function* actionStepIndexIt(actions: CanvasAction[], indexLimit?: [number, number], start: [number, number] = [0, 0]): Generator<[number, number | null]> {
     const [actionStartIt, stepStartIt] = start;
     const [actionLimitIt, stepLimitIt] = indexLimit || [undefined, undefined];
 
-    const reverse = actionLimitIt !== undefined && actionLimitIt < actionStartIt ||
-        stepLimitIt !== undefined && stepLimitIt < stepStartIt;
+    const reverse = actionLimitIt !== undefined && stepLimitIt !== undefined &&
+        !isSmallerIndexThan([actionStartIt, stepStartIt], [actionLimitIt, stepLimitIt]);
 
     for (let actionIt = actionStartIt;
         reverse ? actionIt >= 0 : actionIt < actions.length;
@@ -39,7 +47,7 @@ function* actionStepIndexIt(actions: CanvasAction[], indexLimit?: [number, numbe
             if (!actionLimitIt || !stepLimitIt) continue;
 
             if (actionIt == actionLimitIt && (reverse ? stepIt <= stepLimitIt : stepIt >= stepLimitIt) ||
-                    (reverse ? actionIt < actionLimitIt : actionIt > actionLimitIt)) {
+                (reverse ? actionIt < actionLimitIt : actionIt > actionLimitIt)) {
                 return;
             }
         }
@@ -90,16 +98,22 @@ function generateImDaState(ctx: CanvasRenderingContext2D): ImageData {
 }
 
 function draw(canvas: RefObject<HTMLCanvasElement>, actions: CanvasAction[],
-    actionIndex = actions.length - 1,
-    stepIndex = actions[actionIndex].steps.length): void {
-    const currentCanvas = canvas.current;
-    if (!currentCanvas) return;
-
-    const ctx = currentCanvas.getContext('2d');
+    index: [number, number] = [actions.length - 1, actions[actions.length - 1].steps.length]): void {
+    const [actionIndex, stepIndex] = index;
+    const ctx = canvas?.current?.getContext('2d');
     if (!ctx) return;
 
-    const [lastRoot, setLastRoot] = useState<[number, number]>();
-    const [imDaHistory, setImDaHistory] = useState<ImageData[][]>([]);
+    // "Impossible" edge cases:
+    /*
+    index is smaller than oldLastRoot (root implies complete chain of steps, reassign doesnt make sense)
+    */
+
+    const [oldLastRoot, setLastRoot] = useState<[number, number]>();
+    const [imDaHistory, setImDaHistory] = useState<ImageData[][]>([]);  // Might not work. Needs the pure data to save n restore
+    // root is the maximum of what can be drawn
+    const newLastRoot = isSmallerIndexThan(index);
+    setLastRoot(newLastRoot);
+    const latestmageData = pastImageDataIndex(actions, imDaHistory, newLastRoot, true);
 
     // Step 1
     //d Declare last action index i in a complete chain from the start (max actionIndex)
@@ -164,7 +178,7 @@ const GameCanvas: React.FC<PropType> = ({ id }) => {
 
 function handleSocketEvents(id: number) {
     const socketEventName = (name: string) => `game.${id}.${name}`;
-    
+
     useSocket(socketEventName("draw.live"), (actionIndex: number, stepIndex: number, data: Record<string, unknown>, brushType?: CanvasBrushType) => {
         // TODO rate limit
         const [actions, setActions] = useState<CanvasAction[]>([]);
