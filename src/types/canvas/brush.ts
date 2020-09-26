@@ -1,11 +1,9 @@
 abstract class CanvasBrush {
-    redrawOnly: boolean;
-    stepOrder: boolean;
+    /*redrawOnly: boolean;
 
-    constructor(completeOnly: boolean, stepOrder: boolean) {
+    constructor(completeOnly: boolean) {
         this.redrawOnly = completeOnly;
-        this.stepOrder = stepOrder;
-    }
+    }*/
 
     abstract draw(ctx: CanvasRenderingContext2D, drawSteps: [number, number][]): void;
 

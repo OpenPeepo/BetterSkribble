@@ -1,8 +1,8 @@
 import CanvasBrush from "../brush";
 
 class CircleFillBrush extends CanvasBrush {
-    constructor() {
-        super(false, true);
+    draw(ctx: CanvasRenderingContext2D, drawSteps: [number, number][]): void {
+        throw new Error("Method not implemented.");
     }
 }
 

@@ -1,0 +1,1 @@
+// TODO: Move non-component related stuff from game-canvas.tsx here.

@@ -21,48 +21,44 @@ function isSmallerIndexThan(startIndex: [number, number], endIndex: [number, num
         actionStartIndex == actionEndIndex && stepStartIndex <= stepEndIndex;
 }
 
-function* actionStepIndexIt(actions: CanvasAction[], indexLimit?: [number, number], start: [number, number] = [0, 0]): Generator<[number, number | null]> {
-    const [actionStartIt, stepStartIt] = start;
-    const [actionLimitIt, stepLimitIt] = indexLimit || [undefined, undefined];
+function* actionStepIndexIt(actions: CanvasAction[], startIndex: [number, number] = [0, 0], maxIndex?: [number, number]): Generator<[number, number | null]> {
+    const [actionStartIt, stepStartIt] = startIndex;
+    const [actionMaxIt, stepMaxIt] = maxIndex || [undefined, undefined];
 
-    const reverse = actionLimitIt !== undefined && stepLimitIt !== undefined &&
-        !isSmallerIndexThan([actionStartIt, stepStartIt], [actionLimitIt, stepLimitIt]);
+    const reverse = maxIndex && isSmallerIndexThan(maxIndex, startIndex);
 
     for (let actionIt = actionStartIt;
-        reverse ? actionIt >= 0 : actionIt < actions.length;
-        reverse ? actionIt-- : actionIt++) {
-        const action = actions[actionIt];
+    reverse ? actionIt >= 0 : actionIt < actions.length;
+    reverse ? actionIt-- : actionIt++) {
+        if (typeof actionMaxIt === 'number' && (reverse ? actionIt < actionMaxIt : actionIt > actionMaxIt)) return;
 
+        const action = actions[actionIt];
         const steps = action?.steps;
         if (!steps || steps.length == 0) {
             yield [actionIt, null];
-            continue;
-        }
-
-        for (let stepIt = (actionIt == actionStartIt) ? stepStartIt : (reverse ? steps.length - 1 : 0);
+        } else {
+            for (let stepIt = (actionIt == actionStartIt) ? stepStartIt : (reverse ? steps.length - 1 : 0);
             reverse ? stepIt >= 0 : stepIt < steps.length;
             reverse ? stepIt-- : stepIt++) {
-            yield [actionIt, stepIt];
+                if (actionMaxIt === actionIt && typeof stepMaxIt === 'number' && (reverse ? stepIt < stepMaxIt : stepIt > stepMaxIt)) return;
 
-            if (!actionLimitIt || !stepLimitIt) continue;
-
-            if (actionIt == actionLimitIt && (reverse ? stepIt <= stepLimitIt : stepIt >= stepLimitIt) ||
-                (reverse ? actionIt < actionLimitIt : actionIt > actionLimitIt)) {
-                return;
+                yield [actionIt, stepIt];
             }
         }
     }
 }
 
 function furthestRootedIndex(actions: CanvasAction[],
-    indexRoot: [number, number] = [0, 0], maxIndex?: [number, number]) {
-    const chainIterator = actionStepIndexIt(actions, maxIndex, indexRoot);
+    indexRoot: [number, number] = [0, 0]) {
+    const chainIterator = actionStepIndexIt(actions, indexRoot);
 
-    let previousIteration: [number, number] | null = null;
+    let previousIteration: [number, number] = indexRoot;
     for (let indexItR = chainIterator.next(); !indexItR.done; indexItR = chainIterator.next()) {
         const [actionIndex, stepIndex] = indexItR.value;
+        const [prevActionIndex, prevStepIndex] = previousIteration;
 
-        if (stepIndex === null || !actions[actionIndex].steps[stepIndex]) {
+        if (stepIndex === null || !actions[actionIndex].steps[stepIndex] ||
+            (prevActionIndex != actionIndex && !actions[actionIndex].complete)) {
             break;
         }
 
@@ -72,9 +68,12 @@ function furthestRootedIndex(actions: CanvasAction[],
     return previousIteration;
 }
 
+// Decision to make: ImageDataHistory represent BEFORE or AFTER drawing? Suggestion: Code drawing algorithm in draw(...), see what is assumed. Use that
+// UPDATE: Currently BEFORE drawing. This means that [0, 0] is an empty canvas.
+// UPDATE #2: ImageData will probably only save finished actions. In that case, remove this method.
 function pastImageDataIndex(actions: CanvasAction[],
-    history: ImageData[][], presentIndex: [number, number], onlyFullActions = false): [number, number] | null {
-    const imDaIterator = actionStepIndexIt(actions, [0, 0], presentIndex);
+    history: ImageData[][], presentIndex: [number, number], onlyFullActions = false): [number, number] | null { // onlyFullActions not required? => Action.complete
+    const imDaIterator = actionStepIndexIt(actions, presentIndex, [0, 0]);
 
     // Skip present index
     if (imDaIterator.next().done) return null;
@@ -97,76 +96,50 @@ function generateImDaState(ctx: CanvasRenderingContext2D): ImageData {
     return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
-function draw(canvas: RefObject<HTMLCanvasElement>, actions: CanvasAction[],
-    index: [number, number] = [actions.length - 1, actions[actions.length - 1].steps.length]): void {
-    const [actionIndex, stepIndex] = index;
-    const ctx = canvas?.current?.getContext('2d');
-    if (!ctx) return;
+function sameArray(array1: any[], array2: any[]) {
+    return array1.length == array2.length && array1.every((e, index) => e === array2[index]);
+}
 
-    // "Impossible" edge cases:
+// Might not need to store steps, only actions.
+function initImDaHistory(ctx: CanvasRenderingContext2D, history: ImageData[][]): [number, number] {
+    history[0][0] = generateImDaState(ctx);
+    return [0, 0];
+}
+
+function draw(ctx: CanvasRenderingContext2D, actions: CanvasAction[]): void {
+    // The root represents the last index which can be drawn without potentially skipping future incoming steps before the last incoming ones.
+    // This mechanism effectively synchronizes drawing order.
+    const [oldRoot, setRoot] = useState<[number, number]>([0, 0]);
+    const newRoot = furthestRootedIndex(actions, oldRoot);
+    if (sameArray(oldRoot, newRoot)) return;
+    setRoot(newRoot);
+
     /*
-    index is smaller than oldLastRoot (root implies complete chain of steps, reassign doesnt make sense)
+    // TODO: ImageData needs to be managed by calling method when completing an action
+
+    const [imDaHistory, setImDaHistory] = useState<ImageData[][]>([]);  // Might not work. Needs the pure data to save n restore // UPDATE: PROBABLY WORKS
+    const latestImDaIndex = pastImageDataIndex(actions, imDaHistory, newRoot) || initImDaHistory(ctx, imDaHistory);
     */
 
-    const [oldLastRoot, setLastRoot] = useState<[number, number]>();
-    const [imDaHistory, setImDaHistory] = useState<ImageData[][]>([]);  // Might not work. Needs the pure data to save n restore
-    // root is the maximum of what can be drawn
-    const newLastRoot = isSmallerIndexThan(index);
-    setLastRoot(newLastRoot);
-    const latestmageData = pastImageDataIndex(actions, imDaHistory, newLastRoot, true);
+    const oldRootIt = actionStepIndexIt(actions, oldRoot);
+    oldRootIt.next(); // Skip actual oldRoot, we only want to draw new stuff
+    const shiftedOldRoot: [number, number] = oldRootIt.next().value;
 
-    // Step 1
-    //d Declare last action index i in a complete chain from the start (max actionIndex)
-    //d Declare last step index j in a complete chain from the start (max arraylength)
-    // Step 2
-    //t Render everything from the latest imagedata state before both indices up to a[i][j],
-    //d if it.brush.completeOnly skip imgData UNLESS (!) last element of action
+    for (let actionIndex = shiftedOldRoot[0]; actionIndex <= newRoot[0]; actionIndex++) {
+        const action = actions[actionIndex];
+        const steps = action.steps;
 
-    for (let actionIt = actionIndex; actionIndex < actions.length; actionIt++) {
-        const action = actions[actionIt];
-        const actionSteps = action.steps;
-
-        if (actionSteps.length === 0) {
-            return;
-        }
+        const startStep = actionIndex == shiftedOldRoot[0] ? shiftedOldRoot[1] : 0;
+        const endStep = actionIndex == newRoot[0] ? newRoot[1] + 1 : steps.length;
 
         const brush = getBrush(action.brush);
-        let imageDataStepIndex = 0;
-
-        // instead of using actionIndex, actionResetIndex ?
-        if (brush?.redrawOnly === false) {
-            let completeStepIndex = 0;
-
-            // Find first index without following element
-            for (; actionSteps[completeStepIndex + 1]; completeStepIndex++);
-            // Find the latest saved history for said index
-            imageDataStepIndex = completeStepIndex;
-            while (imageDataStepIndex > 0 && !imDaHistory[actionIndex][imageDataStepIndex - 1]) {
-                imageDataStepIndex--;
-            }
+        if (!brush) {
+            console.warn('Brush for action ' + actionIndex + ' unknown! Skipping...');
+            continue;
         }
 
-        let imDa = imDaHistory[actionIndex][imageDataStepIndex];
-        if (!imDa) {
-            if (actionIndex <= 0) {
-                imDa = generateImDaState();
-            }
-            // Use a actionResetIndex here
-            const latestCompleteImDaSteps = imDaHistory[actionIndex - 1];
-            imDa = ((latestCompleteImDaSteps && latestCompleteImDaSteps.length > 0) && (actionIndex <= 0)) ? generateImDaState() : latestCompleteImDaSteps[latestCompleteImDaSteps.length - 1];
-        }
-
-
-
-        for (let stepIt = completeStepIndex; stepIt < actionSteps.length; stepIt++) {
-            const step = actionSteps[stepIt];
-
-            brush?.draw(ctx, [...step]);
-        }
+        brush.draw(ctx, steps.slice(startStep, endStep));
     }
-
-
-    return;
 }
 
 const GameCanvas: React.FC<PropType> = ({ id }) => {
