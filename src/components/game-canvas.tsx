@@ -152,9 +152,12 @@ const GameCanvas: React.FC<PropType> = ({ id }) => {
 function handleSocketEvents(id: number) {
     const socketEventName = (name: string) => `game.${id}.${name}`;
 
+    // TODO: Handle complete action feed
     useSocket(socketEventName("draw.live"), (actionIndex: number, stepIndex: number, data: Record<string, unknown>, brushType?: CanvasBrushType) => {
         // TODO rate limit
         const [actions, setActions] = useState<CanvasAction[]>([]);
+
+        // TODO Ignore live feed for already finished actions
 
         let actionReIndex: number | undefined;
         let stepReIndex: number | undefined;
