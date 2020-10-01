@@ -1,9 +1,18 @@
+import { type } from "os";
 import CanvasBrush from "./brush";
 import CanvasBrushType from "./brush-type";
 
+type StepCoords = {
+    coords: [number, number]
+};
+
+type StepColor = {
+    color: number
+}
+
 class CanvasAction {
     brush: CanvasBrushType;
-    steps: [number, number][];
+    steps: StepData[];
 
     complete: boolean;
 
@@ -13,5 +22,7 @@ class CanvasAction {
         this.complete = false;
     }
 }
+
+export type StepData = StepCoords & StepColor;
 
 export default CanvasAction;

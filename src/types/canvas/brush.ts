@@ -1,3 +1,5 @@
+import { StepData } from "./action";
+
 abstract class CanvasBrush {
     /*redrawOnly: boolean;
 
@@ -5,7 +7,7 @@ abstract class CanvasBrush {
         this.redrawOnly = completeOnly;
     }*/
 
-    abstract draw(ctx: CanvasRenderingContext2D, drawSteps: [number, number][]): void;
+    abstract draw(ctx: CanvasRenderingContext2D, drawSteps: StepData[]): void;
 
     protected drawPixel(imageData: ImageData, x: number, y: number, rgba: number): void {
         const width = imageData.width;
